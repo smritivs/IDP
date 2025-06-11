@@ -1,0 +1,2 @@
+run:
+	nvcc ./src/*.cu
