@@ -77,21 +77,13 @@ class KolmogorovArnoldNetwork(nn.Module):
         )
         # Compute cosine and sine components.
         a = k * x
-        print(f"k shape: {k.shape} | x_shape: {x.shape} | prod shape: {a.shape}")
         # print(k)
         # print(a)
         cos_terms = torch.cos(k * x)
         sin_terms = torch.sin(k * x)
-        print(cos_terms.shape)
         # Perform Fourier expansion using Einstein summation for efficiency.
         y_cos = torch.einsum("bij,oij->bo", cos_terms, self.fourier_coeffs[0])
         y_sin = torch.einsum("bij,oij->bo", sin_terms, self.fourier_coeffs[1])
-        print(f"cos shape {cos_terms.shape} | coeff shape {self.fourier_coeffs[0].shape}")
-        print(y_cos.shape)
-        print("-"*10)
-        print(self.fourier_coeffs[0])
-        print(self.fourier_coeffs[1])
-        print("-"*10)
 
         y = y_cos + y_sin
         if self.add_bias:
@@ -134,6 +126,7 @@ if __name__ == "__main__":
                      [0.3131037950515747, 0.1637701541185379], 
                      [0.31852877140045166, -0.38924485445022583], 
                      [-0.4049484431743622, -0.09340766817331314]]],
+
                      [[[-0.7642549872398376, -0.3950747549533844], 
                      [0.5043845772743225, -0.0421271026134491], 
                      [0.07050096988677979, -0.34597474336624146], 
@@ -152,22 +145,4 @@ if __name__ == "__main__":
 
     y = kan.forward(x)
 
-    print(y)
-
-    a = torch.FloatTensor([[-0.5419355034828186, -0.5137631297111511],[-0.056270383298397064, 0.05014132708311081],[0.23562470078468323, 1.270749807357788], [0.0936775878071785, -0.22838330268859863]])
-    b = torch.FloatTensor([[0.5403023362159729, -0.416146844625473], [0.5403023362159729, -0.416146844625473], [0.5403023362159729, -0.416146844625473], [0.5403023362159729, -0.416146844625473]])
-
-    d = torch.FloatTensor([[0.15364940464496613, 0.22368177771568298], 
-                     [-0.40279123187065125, 0.4280928373336792], 
-                     [0.29595276713371277, -0.8042312860488892], 
-                     [0.5119664669036865, -0.18502190709114075]])
-    e = torch.FloatTensor([[0.8414709568023682, 0.9092974066734314], [0.8414709568023682, 0.9092974066734314], [0.8414709568023682, 0.9092974066734314], [0.8414709568023682, 0.9092974066734314]])
-
-
-    f = d*e
-
-    c = a*b;
-    print(c)
-    print(f)
-    print(c.sum())
-    print(f.sum())
+    print(y.detach().numpy().tolist())
