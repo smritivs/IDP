@@ -86,18 +86,39 @@ class KolmogorovArnoldNetwork(nn.Module):
         y_sin = torch.einsum("bij,oij->bo", sin_terms, self.fourier_coeffs[1])
         print(f"cos shape {cos_terms.shape} | coeff shape {self.fourier_coeffs[0].shape}")
         print(y_cos.shape)
+        print("-"*10)
+        print(self.fourier_coeffs[0])
+        print(self.fourier_coeffs[1])
+        print("-"*10)
+
         y = y_cos + y_sin
         if self.add_bias:
             y = y + self.bias
+
+        with open("./test/dump.txt","w") as file:
+            file.write("Fourier Coeffs Cos\n")
+            f0 = str(self.fourier_coeffs[0].detach().numpy().tolist())
+            f1 = str(self.fourier_coeffs[1].detach().numpy().tolist())
+            file.write(f0)
+            file.write("\n")
+            file.write("Fourier Coeffs Sin\n")
+            file.write(f1)
+            file.write("\n")
+            file.write(f"In\n{x}\n")
+            file.write(f"Res\n{y}\n")
+
         return y
 
 if __name__ == "__main__":
-	batch_size = 10
+	batch_size = 1
+	num_harmonics = 2
 	input_dim = 3
-	output_dim = 6
+	output_dim = 4
 	x = torch.ones((batch_size,input_dim))
 	y = torch.zeros((batch_size,output_dim))
 
-	kan = KolmogorovArnoldNetwork(input_dim=input_dim,output_dim=output_dim)
+	kan = KolmogorovArnoldNetwork(input_dim=input_dim,output_dim=output_dim,num_harmonics=num_harmonics)
 
 	y = kan.forward(x)
+
+	print(y)

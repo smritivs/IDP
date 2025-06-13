@@ -17,10 +17,11 @@ __global__ void randKernel(float *y){
 
 }
 
+template <typename fp>
 __global__ void kanKernel(
-	float ***x,
-	float ***fourierCoeffs,
-	float **y
+	fp ***x,
+	fp ***fourierCoeffs,
+	fp **y
 	){
 
 	// check id value bounds
@@ -32,19 +33,19 @@ __global__ void kanKernel(
 	// output y is of size batch_size, output_dim
 
 	// x*k
-	float x_element = x[idz][idy][0];
+	fp x_element = x[idz][idy][0];
 
 	__syncthreads();
 
 	x[idz][idy][idx] = x_element * idz;
 
 
-	float cosTerms[batchSize][inputDim][numHarmonics];
-	float sinTerms[batchSize][inputDim][numHarmonics];
+	fp cosTerms[batchSize][inputDim][numHarmonics];
+	fp sinTerms[batchSize][inputDim][numHarmonics];
 
-	float trigInp = x[idz][idy][idx];
-	float cosRes = 0;
-	float sinRes = 0;
+	fp trigInp = x[idz][idy][idx];
+	fp cosRes = 0;
+	fp sinRes = 0;
 
 	sincosf(trigInp,&sinRes,&cosRes);
 
@@ -53,18 +54,29 @@ __global__ void kanKernel(
 
 	// second bounds check for output dims
 
-	float yCos[batchSize][outputDim];
-	float ySin[batchSize][outputDim];
+	fp yCos[batchSize][outputDim];
+	fp ySin[batchSize][outputDim];
+
+	fp yCosSum = 0;
+	fp ySinSum = 0;
 
 	// optimize
 	for(int i=0;i<inputDim;i++){
 		for(int j=0;j<numHarmonics;j++){
-			yCos[idz][idy] += cosTerms[idz][i][j] * fourierCoeffs[idy][i][j];
-			ySin[idz][idy] += sinTerms[idz][i][j] * fourierCoeffs[idy][i][j];
+			yCosSum += cosTerms[idz][i][j] * fourierCoeffs[idy][i][j];
+			ySinSum += sinTerms[idz][i][j] * fourierCoeffs[idy][i][j];
 		}
 	}
+	yCos[idz][idy] = yCosSum;
+	ySin[idz][idy] = ySinSum;
 
 	y[idz][idy] = yCos[idz][idy] + ySin[idz][idy] + bias;
+}
+
+template<typename tensor>
+
+tensor kanGPU(tensor a, tensor b){
+	return a+b;
 }
 
 int main(){
