@@ -1,0 +1,3 @@
+/home/bala/git_stuff/IDP/cuda/build/CMakeFiles/kan.dir
+/home/bala/git_stuff/IDP/cuda/build/CMakeFiles/edit_cache.dir
+/home/bala/git_stuff/IDP/cuda/build/CMakeFiles/rebuild_cache.dir
