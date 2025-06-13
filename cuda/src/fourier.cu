@@ -64,7 +64,7 @@ int main() {
     dim3 threads(8, 8);
     dim3 blocks((N + threads.x - 1) / threads.x, (M + threads.y - 1) / threads.y);
 
-    fourier_encode_kernel<<<blocks, threads>>>(dev_x, dev_freq, dev_out, N, D, M);
+    launch_fourier(dev_x, dev_freq, dev_out, N, D, M);
 
     cudaMemcpy(host_out, dev_out, N * 2 * M * sizeof(float), cudaMemcpyDeviceToHost);
 
@@ -78,4 +78,19 @@ int main() {
     }
 
     return 0;
+}
+
+// Wrapper 
+void launch_fourier(
+    const float* x,
+    const float* freq,
+    float* out,
+    int N, int D, int M
+) {
+    dim3 threads(8, 8);
+    dim3 blocks((N + threads.x - 1) / threads.x, (M + threads.y - 1) / threads.y);
+
+    fourier_encode_kernel<<<blocks, threads>>>(x, freq, out, N, D, M);
+
+    cudaDeviceSynchronize(); 
 }
