@@ -1,5 +1,5 @@
 run:
-	nvcc ./src/$(file).cu -I./inc
+	nvcc ./src/$(file).cu -I./inc -g -G
 	./a.out
 
 warn:
