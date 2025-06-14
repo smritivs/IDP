@@ -29,6 +29,21 @@ __global__ void fourier_encode_kernel(
     }
 }
 
+// Wrapper 
+void launch_fourier(
+    const float* x,
+    const float* freq,
+    float* out,
+    int N, int D, int M
+) {
+    dim3 threads(8, 8);
+    dim3 blocks((N + threads.x - 1) / threads.x, (M + threads.y - 1) / threads.y);
+
+    fourier_encode_kernel<<<blocks, threads>>>(x, freq, out, N, D, M);
+
+    cudaDeviceSynchronize(); 
+}
+
 int main() {
     const int N = 4;  // batch size
     const int D = 2;  // input dimension
@@ -80,17 +95,4 @@ int main() {
     return 0;
 }
 
-// Wrapper 
-void launch_fourier(
-    const float* x,
-    const float* freq,
-    float* out,
-    int N, int D, int M
-) {
-    dim3 threads(8, 8);
-    dim3 blocks((N + threads.x - 1) / threads.x, (M + threads.y - 1) / threads.y);
 
-    fourier_encode_kernel<<<blocks, threads>>>(x, freq, out, N, D, M);
-
-    cudaDeviceSynchronize(); 
-}
