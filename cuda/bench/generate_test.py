@@ -2,9 +2,9 @@ import numpy as np
 import torch
 
 batch_size = 16
-num_harmonics = 5
-input_dim = 10
-output_dim = 10
+num_harmonics = 8
+input_dim = 8
+output_dim = 12
 
 if __name__ == "__main__":
 	input_x = np.random.rand(batch_size,input_dim)

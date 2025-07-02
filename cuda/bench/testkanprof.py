@@ -94,9 +94,9 @@ class KolmogorovArnoldNetwork(nn.Module):
 if __name__ == "__main__":
     device = 'cuda'
     batch_size = 16
-    num_harmonics = 5
-    input_dim = 10
-    output_dim = 10
+    num_harmonics = 8
+    input_dim = 8
+    output_dim = 12
     bias = 0
     add_bias = False
     x = torch.ones((batch_size,input_dim)).to(device)
@@ -136,7 +136,8 @@ if __name__ == "__main__":
     fourier_coeffs = torch.FloatTensor(fourier_coeffs).to(device)
     kan = KolmogorovArnoldNetwork(input_dim=input_dim,output_dim=output_dim,num_harmonics=num_harmonics,fourier_coeffs=fourier_coeffs)
     kan = kan.to(device)
-    activities = [ProfilerActivity.CUDA, ProfilerActivity.CPU]
+    activities = [ProfilerActivity.CUDA]
+    # activities = [ProfilerActivity.CUDA, ProfilerActivity.CPU]
     sort_by_keyword = device + "_time_total"
 
     with profile(activities=activities, record_shapes=True) as prof:
