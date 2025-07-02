@@ -1,13 +1,12 @@
+LIBTORCH_PATH = /home/bala/libtorch
+
 run:
-	nvcc ./src/$(file).cu -I./inc -g -G
-	./a.out
-
-warn:
-	nvcc ./src/$(file).cu -I./inc
-
-prof:
-	nvcc ./src/$(file).cu -I./inc
-	nvprof ./a.out
+	rm -rf build
+	mkdir build
+	cd build; cmake -DCMAKE_PREFIX_PATH=$(LIBTORCH_PATH) ..; make
+	mv ./build/ex ./
+	nvprof ./ex > ./bench/cudadump.txt
+	cd bench; python3 testkanprof.py
 
 clean:
-	rm -rf *.o *.out
+	rm -rf build *.o *.out

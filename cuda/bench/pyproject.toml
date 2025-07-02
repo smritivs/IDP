@@ -1,0 +1,9 @@
+[project]
+name = "bench"
+version = "0.1.0"
+description = "Python based benchmarking"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=2.2.6",
+]
