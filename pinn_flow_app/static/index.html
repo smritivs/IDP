@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PINN Flow Analysis</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            padding: 25px;
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .upload-section {
+            text-align: center;
+        }
+
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 12px;
+            padding: 40px 20px;
+            background: linear-gradient(45deg, #f8f9ff 0%, #e8f0ff 100%);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: linear-gradient(45deg, #f0f2ff 0%, #e0e8ff 100%);
+        }
+
+        .upload-area.dragover {
+            border-color: #28a745;
+            background: linear-gradient(45deg, #f0fff0 0%, #e8f5e8 100%);
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            color: #667eea;
+        }
+
+        .upload-text {
+            font-size: 1.1rem;
+            color: #666;
+            margin-bottom: 15px;
+        }
+
+        .upload-btn {
+            background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .preview-container {
+            margin-top: 20px;
+        }
+
+        .preview-image {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        .parameters-section h3 {
+            margin-bottom: 20px;
+            color: #333;
+            font-size: 1.3rem;
+        }
+
+        .param-group {
+            margin-bottom: 20px;
+        }
+
+        .param-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #555;
+        }
+
+        .param-group input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .param-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .param-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .analyze-btn {
+            background: linear-gradient(45deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .analyze-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
+        }
+
+        .analyze-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .results-section {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            padding: 25px;
+            margin-top: 30px;
+            display: none;
+        }
+
+        .results-section.show {
+            display: block;
+        }
+
+        .results-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            margin-top: 20px;
+        }
+
+        .result-item {
+            text-align: center;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        .result-item h4 {
+            margin-bottom: 15px;
+            color: #333;
+            font-size: 1.3rem;
+        }
+
+        .result-image {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .result-image:hover {
+            transform: scale(1.02);
+        }
+
+        .image-fullscreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0,0,0,0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            cursor: pointer;
+        }
+
+        .image-fullscreen img {
+            max-width: 90%;
+            max-height: 90%;
+            border-radius: 8px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 50px;
+            height: 50px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border: 1px solid #f5c6cb;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌊 PINN Flow Analysis</h1>
+            <p>Upload an image to analyze fluid flow using Physics-Informed Neural Networks</p>
+        </div>
+
+        <div class="main-content">
+            <div class="card upload-section">
+                <h3>Upload Image</h3>
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">📁</div>
+                    <div class="upload-text">Drag & drop your image here<br>or click to browse</div>
+                    <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                        Choose File
+                    </button>
+                    <input type="file" id="fileInput" class="file-input" accept="image/*">
+                </div>
+                <div class="preview-container" id="previewContainer" style="display: none;">
+                    <img id="previewImage" class="preview-image" alt="Preview">
+                    <p id="fileName" style="margin-top: 10px; color: #666;"></p>
+                </div>
+            </div>
+
+            <div class="card parameters-section">
+                <h3>Parameters</h3>
+                <div class="param-group">
+                    <label for="domainBounds">Domain Bounds</label>
+                    <div class="param-row">
+                        <input type="number" id="xMin" placeholder="X Min" value="0" step="0.1">
+                        <input type="number" id="xMax" placeholder="X Max" value="6" step="0.1">
+                    </div>
+                    <div class="param-row" style="margin-top: 10px;">
+                        <input type="number" id="yMin" placeholder="Y Min" value="0" step="0.1">
+                        <input type="number" id="yMax" placeholder="Y Max" value="3" step="0.1">
+                    </div>
+                </div>
+                <div class="param-group">
+                    <label for="inletVelocity">Inlet Velocity</label>
+                    <input type="number" id="inletVelocity" value="1.0" step="0.1">
+                </div>
+                <div class="param-group">
+                    <label for="epochs">Training Epochs</label>
+                    <input type="number" id="epochs" value="1000" step="100">
+                </div>
+                <div class="param-group">
+                    <label for="fluidPoints">Fluid Points</label>
+                    <input type="number" id="fluidPoints" value="10000" step="1000">
+                </div>
+                <div class="param-group">
+                    <label for="boundaryPoints">Boundary Points</label>
+                    <input type="number" id="boundaryPoints" value="600" step="100">
+                </div>
+                <button class="analyze-btn" id="analyzeBtn" disabled onclick="analyzeFlow()">
+                    Analyze Flow
+                </button>
+            </div>
+        </div>
+
+        <div class="status-container" id="statusContainer"></div>
+
+        <div class="results-section" id="resultsSection">
+            <h3>Analysis Results</h3>
+            <div class="results-grid" id="resultsGrid"></div>
+        </div>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const previewContainer = document.getElementById('previewContainer');
+        const previewImage = document.getElementById('previewImage');
+        const fileName = document.getElementById('fileName');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const statusContainer = document.getElementById('statusContainer');
+        const resultsSection = document.getElementById('resultsSection');
+        const resultsGrid = document.getElementById('resultsGrid');
+
+        let selectedFile = null;
+
+        // Drag and drop functionality
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        function handleFile(file) {
+            if (!file.type.startsWith('image/')) {
+                showStatus('Please select an image file.', 'error');
+                return;
+            }
+
+            selectedFile = file;
+            
+            // Show preview
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                previewImage.src = e.target.result;
+                fileName.textContent = file.name;
+                previewContainer.style.display = 'block';
+                analyzeBtn.disabled = false;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function showStatus(message, type = 'info') {
+            statusContainer.innerHTML = `<div class="${type}">${message}</div>`;
+        }
+
+        let progressEventSource = null;
+
+        function showLoading() {
+            statusContainer.innerHTML = `
+                <div class="loading" style="color: white;"">
+                    <div class="loading-spinner"></div>
+                    <div>Analyzing flow... This may take a few minutes.</div>
+                </div>
+                <div class="progress-container" id="progressContainer">
+                    <h4>Training Progress</h4>
+                    <div class="progress-log" id="progressLog">Starting analysis...</div>
+                </div>
+            `;
+            
+            // Start listening for progress updates
+            startProgressStream();
+        }
+
+        function startProgressStream() {
+            if (progressEventSource) {
+                progressEventSource.close();
+            }
+            
+            progressEventSource = new EventSource('/progress');
+            const progressLog = document.getElementById('progressLog');
+            
+            progressEventSource.onmessage = function(event) {
+                if (progressLog) {
+                    progressLog.innerHTML += event.data + '<br>';
+                    progressLog.scrollTop = progressLog.scrollHeight;
+                }
+            };
+            
+            progressEventSource.onerror = function(event) {
+                console.log('Progress stream error:', event);
+            };
+        }
+
+        function stopProgressStream() {
+            if (progressEventSource) {
+                progressEventSource.close();
+                progressEventSource = null;
+            }
+        }
+
+        function updateProgress(message) {
+            const progressLog = document.getElementById('progressLog');
+            
+            if (progressLog) {
+                progressLog.innerHTML += message + '<br>';
+                progressLog.scrollTop = progressLog.scrollHeight;
+            }
+        }
+
+        function showImageFullscreen(imageSrc) {
+            const fullscreen = document.createElement('div');
+            fullscreen.className = 'image-fullscreen';
+            fullscreen.innerHTML = `<img src="${imageSrc}" alt="Fullscreen view">`;
+            
+            fullscreen.onclick = () => {
+                document.body.removeChild(fullscreen);
+            };
+            
+            document.body.appendChild(fullscreen);
+        }
+
+        function clearStatus() {
+            statusContainer.innerHTML = '';
+        }
+
+        async function analyzeFlow() {
+            if (!selectedFile) {
+                showStatus('Please select an image first.', 'error');
+                return;
+            }
+
+            analyzeBtn.disabled = true;
+            showLoading();
+            resultsSection.classList.remove('show');
+
+            try {
+                const formData = new FormData();
+                formData.append('image', selectedFile);
+                formData.append('xMin', document.getElementById('xMin').value);
+                formData.append('xMax', document.getElementById('xMax').value);
+                formData.append('yMin', document.getElementById('yMin').value);
+                formData.append('yMax', document.getElementById('yMax').value);
+                formData.append('inletVelocity', document.getElementById('inletVelocity').value);
+                formData.append('epochs', document.getElementById('epochs').value);
+                formData.append('fluidPoints', document.getElementById('fluidPoints').value);
+                formData.append('boundaryPoints', document.getElementById('boundaryPoints').value);
+
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    stopProgressStream();
+                    showResults(result);
+                    showStatus('Analysis completed successfully!', 'success');
+                } else {
+                    stopProgressStream();
+                    showStatus(`Error: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                stopProgressStream();
+                showStatus(`Network error: ${error.message}`, 'error');
+            } finally {
+                analyzeBtn.disabled = false;
+            }
+        }
+
+        function showResults(result) {
+            resultsGrid.innerHTML = '';
+            
+            // Show processed geometry
+            if (result.geometry_image) {
+                const geometryDiv = document.createElement('div');
+                geometryDiv.className = 'result-item';
+                geometryDiv.innerHTML = `
+                    <h4>📐 Processed Geometry</h4>
+                    <p>Shows how your image was interpreted: Blue = Fluid domain, Red = Solid obstacles</p>
+                    <img src="data:image/png;base64,${result.geometry_image}" 
+                         class="result-image" 
+                         alt="Geometry"
+                         onclick="showImageFullscreen('data:image/png;base64,${result.geometry_image}')">
+                `;
+                resultsGrid.appendChild(geometryDiv);
+            }
+
+            // Show loss history
+            if (result.loss_plot) {
+                const lossDiv = document.createElement('div');
+                lossDiv.className = 'result-item';
+                lossDiv.innerHTML = `
+                    <h4>📊 Training Loss History</h4>
+                    <p>Shows how well the neural network learned the physics equations</p>
+                    <img src="data:image/png;base64,${result.loss_plot}" 
+                         class="result-image" 
+                         alt="Loss History"
+                         onclick="showImageFullscreen('data:image/png;base64,${result.loss_plot}')">
+                `;
+                resultsGrid.appendChild(lossDiv);
+            }
+
+            // Show flow results
+            if (result.flow_results) {
+                const flowDiv = document.createElement('div');
+                flowDiv.className = 'result-item';
+                flowDiv.innerHTML = `
+                    <h4>🌊 Flow Analysis Results</h4>
+                    <p>Velocity components, pressure field, and streamlines around your geometry</p>
+                    <img src="data:image/png;base64,${result.flow_results}" 
+                         class="result-image" 
+                         alt="Flow Results"
+                         onclick="showImageFullscreen('data:image/png;base64,${result.flow_results}')">
+                `;
+                resultsGrid.appendChild(flowDiv);
+            }
+
+            resultsSection.classList.add('show');
+        }
+    </script>
+</body>
+</html>
