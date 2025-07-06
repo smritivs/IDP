@@ -94,7 +94,7 @@ class KolmogorovArnoldNetwork(nn.Module):
 if __name__ == "__main__":
     device = 'cuda'
     batch_size = 16
-    num_harmonics = 8
+    num_harmonics = 4
     input_dim = 8
     output_dim = 12
     bias = 0

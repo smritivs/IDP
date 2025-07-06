@@ -20,6 +20,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 from torch import Tensor
+from torch.profiler import profile, record_function, ProfilerActivity
+
 
 
 class FourierLayer(nn.Module):
@@ -81,8 +83,8 @@ class FourierLayer(nn.Module):
     def out_features(self) -> int:
         return int(self.frequencies.size(1) * 2)
 
-    def forward(self, x: Tensor) -> Tensor:
-        x_hat = torch.matmul(x, self.frequencies)
+    def forward(self, x, freqs):
+        x_hat = torch.matmul(x, freqs)
         x_sin = torch.sin(2.0 * math.pi * x_hat)
         x_cos = torch.cos(2.0 * math.pi * x_hat)
         x_i = torch.cat([x_sin, x_cos], dim=-1)
@@ -161,8 +163,8 @@ class GaborFilter(nn.Module):
                 )
             )
 
-    def forward(self, x: Tensor) -> Tensor:
-        frequency = self.weight_scale * (self.frequency * self.gamma.sqrt())
+    def forward(self, x: Tensor, freqs: Tensor) -> Tensor:
+        frequency = self.weight_scale * (freqs * self.gamma.sqrt())
 
         x_c = x.unsqueeze(-1)
         x_c = x_c - self.mu
@@ -174,16 +176,45 @@ class GaborFilter(nn.Module):
 
 
 if __name__ == "__main__":
-    flist = [[1.0, 2.0, 3.0],[4.0, 5.0, 6.0]]
-    xlist = [0.1, 0.2],[0.5, 0.4],[0.9, 0.7],[1.0, 0.8]
+	device = 'cuda'
+	batch_size = 4
+	num_freqs = 3
+	input_dim = 2
+	output_dim = input_dim
+	x_in = torch.ones((batch_size,input_dim)).to(device)
+	y = torch.zeros((batch_size,output_dim)).to(device)
+	freqs = torch.ones((input_dim,num_freqs)).to(device)
 
-    f = torch.FloatTensor(flist)
-    x = torch.FloatTensor(xlist)
+	with open("input_x.txt","r") as file:
+		contents = file.read()
+		contents = contents.split()
+		index = 0
+		for i in range(batch_size):
+			for j in range(input_dim):
+				x_in[i][j] = float(contents[index])
+				index+=1
 
-    fl = FourierLayer(in_features=2,frequencies=f)
+	with open("input_freqs.txt","r") as file:
+		contents = file.read()
+		contents = contents.split()
+		index = 0
+		for i in range(input_dim):
+			for j in range(num_freqs):
+				freqs[i][j] = float(contents[index])
+				index+=1
 
-    y = fl.forward(x)
-
-    print(y)
 
 
+	fl = FourierLayer(in_features=input_dim,frequencies=freqs)
+	fl = fl.to(device)
+
+	activities = [ProfilerActivity.CUDA]
+	# activities = [ProfilerActivity.CUDA, ProfilerActivity.CPU]
+	sort_by_keyword = device + "_time_total"
+
+	with profile(activities=activities, record_shapes=True) as prof:
+		with record_function("forward"):
+			y = fl.forward(x=x_in, freqs=freqs)
+
+	print(prof.key_averages().table(sort_by=sort_by_keyword, row_limit=100))
+	print(y.cpu().detach().numpy().tolist())
