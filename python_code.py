@@ -424,6 +424,35 @@ def plot_loss_history(loss_history):
     plt.grid(True)
     plt.show()
 
+# Import the custom CUDA extension (assume it's built and named 'fourier_cuda')
+try:
+    import fourier_cuda  # This should be the name of your compiled extension
+except ImportError:
+    fourier_cuda = None
+    print("[WARNING] fourier_cuda extension not found. Using fallback.")
+
+def fourier_transform(x, freq=None):
+    """Standalone demonstration of a custom fourier kernel (calls CUDA if available)"""
+    print("[DEMO] fourier_transform called with shape:", x.shape)
+    if fourier_cuda is not None:
+        # Ensure input is a torch tensor on CUDA
+        if not isinstance(x, torch.Tensor):
+            x = torch.from_numpy(x).float().cuda()
+        else:
+            x = x.cuda()
+        if freq is None:
+            raise ValueError("Frequency matrix 'freq' must be provided for CUDA kernel.")
+        if not isinstance(freq, torch.Tensor):
+            freq = torch.from_numpy(freq).float().cuda()
+        else:
+            freq = freq.cuda()
+        # Call the custom CUDA kernel (replace 'fourier_forward' with your function name)
+        result = fourier_cuda.fourier_forward(x, freq)
+        return result.cpu().numpy()
+    else:
+        # Fallback: use numpy FFT for demonstration
+        return np.fft.fft(x, axis=0)
+
 # Main function for image-based geometry
 def run_image_based_flow_case(image_path, domain_bounds=[[0, 4], [0, 2]], 
                              inlet_velocity=1.0, epochs=3000, 
@@ -491,7 +520,7 @@ def run_image_based_flow_case(image_path, domain_bounds=[[0, 4], [0, 2]],
     total_params = sum(p.numel() for p in model.parameters())
     print(f"Created PINN with {total_params} parameters")
     print()
-    
+     
     # Train the model
     loss_history = train_pinn_with_image(
         model, fluid_points, boundary_points, obstacle_boundary_points,
@@ -531,3 +560,14 @@ if __name__ == "__main__":
         print("Analysis completed successfully!")
     else:
         print("Analysis failed")
+
+    # Standalone demonstration of fourier_transform using actual fluid_points (regenerated for demo)
+    print("[DEMO] Running fourier_transform on regenerated fluid_points...")
+    # Regenerate a small set of fluid points for demonstration
+    demo_domain_bounds = [[0, 6], [0, 3]]
+    demo_n_points = 16
+    demo_fluid_points = generate_lhs_points(demo_n_points, demo_domain_bounds).astype(np.float32)
+    demo_freq = np.random.rand(2, 4).astype(np.float32)  # Example frequency matrix
+    fourier_result = fourier_transform(demo_fluid_points, freq=demo_freq)
+    print("[DEMO] Fourier transform result shape:", fourier_result.shape)
+    print("[DEMO] Fourier transform result (first 2 rows):\n", fourier_result[:2])
