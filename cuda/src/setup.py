@@ -13,3 +13,16 @@ setup(
         'build_ext': BuildExtension
     }
 )
+
+setup(
+    name='kan_cuda',
+    ext_modules=[
+        CUDAExtension(
+            'kan_cuda',
+            ['kan_cuda.cpp', 'kan.cu'],
+        )
+    ],
+    cmdclass={
+        'build_ext': BuildExtension
+    }
+)

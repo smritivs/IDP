@@ -3,7 +3,7 @@
 #include <vector>
 
 // Declare your CUDA kernel launcher (from your .cu)
-void launch_fourier(
+extern "C" void launch_fourier(
     const float* x,
     const float* freq,
     float* out,

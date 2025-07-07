@@ -1,0 +1,9 @@
+# ninja log v5
+0	1710	1751876131615028097	/home/bala/git_stuff/IDP/cuda/src/build/temp.linux-x86_64-cpython-310/fourier.o	ae9797f7a8714704
+0	27329	1751876157212987941	/home/bala/git_stuff/IDP/cuda/src/build/temp.linux-x86_64-cpython-310/fourier_cuda.o	361cf337873a1531
+0	7674	1751901459068284257	/home/bala/git_stuff/IDP/cuda/src/build/temp.linux-x86_64-cpython-310/kan.o	57b8255825b1fd00
+3	45973	1751901656737529787	/home/bala/git_stuff/IDP/cuda/src/build/temp.linux-x86_64-cpython-310/kan_cuda.o	bfc19d02129512f3
+44	47999	1751901932538340190	/home/bala/git_stuff/IDP/cuda/src/build/temp.linux-x86_64-cpython-310/kan_cuda.o	bfc19d02129512f3
+45	6759	1751902036643447091	/home/bala/git_stuff/IDP/cuda/src/build/temp.linux-x86_64-cpython-310/kan.o	57b8255825b1fd00
+45	3329	1751902223553807692	/home/bala/git_stuff/IDP/cuda/src/build/temp.linux-x86_64-cpython-310/fourier.o	ae9797f7a8714704
+43	3267	1751902337703109805	/home/bala/git_stuff/IDP/cuda/src/build/temp.linux-x86_64-cpython-310/fourier.o	ae9797f7a8714704
