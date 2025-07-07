@@ -44,6 +44,8 @@ void launch_fourier(
     cudaDeviceSynchronize(); 
 }
 
+// Remove or comment out the main() function for extension build
+/*
 int main() {
     const int N = 4;  // batch size
     const int D = 2;  // input dimension
@@ -94,5 +96,6 @@ int main() {
 
     return 0;
 }
+*/
 
 
