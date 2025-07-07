@@ -1,4 +1,5 @@
 #include "kan.h"
+#include <cstdlib>
 #include <ctime>
 #include <chrono>
 
@@ -22,9 +23,8 @@ __global__ void kanKernel(
 	// output y is of size batch_size, output_dim
 
 	// x*k
-	fp x_element = x[idz*inputDim + idy];
-
 	__syncthreads();
+	fp x_element = x[idz*inputDim + idy];
 
 	fp trigInp = x_element * (idx + 1);
 
@@ -36,32 +36,48 @@ __global__ void kanKernel(
 	__shared__ fp cosTerms[batchSize*inputDim*numHarmonics];
 	__shared__ fp sinTerms[batchSize*inputDim*numHarmonics];
 
-
-
-	cosTerms[idz*inputDim*numHarmonics + idy*numHarmonics + idx] = cosRes;
-	sinTerms[idz*inputDim*numHarmonics + idy*numHarmonics + idx] = sinRes;
-
-	// second bounds check for output dims
-
-	__shared__ fp yCos[batchSize*outputDim];
-	__shared__ fp ySin[batchSize*outputDim];
+	__syncthreads();
+	// bounds check
+	if(idy < inputDim){
+		cosTerms[idz*inputDim*numHarmonics + idy*numHarmonics + idx] = cosRes;
+		sinTerms[idz*inputDim*numHarmonics + idy*numHarmonics + idx] = sinRes;
+	}
 
 	fp yCosSum = 0;
 	fp ySinSum = 0;
+	__shared__ fp partialProdsCosTest[inputDim*numHarmonics];
+
+	// create partial products and store in shared memory
+	__shared__ fp partialProdsCos[numHarmonics];
+	__shared__ fp partialProdsSin[numHarmonics];
+
+	partialProdsCos[idx] = 0;
+	partialProdsSin[idx] = 0;
 
 	// optimize
 	for(int i=0;i<inputDim;i++){
 		for(int j=0;j<numHarmonics;j++){
-			// yCosSum += cosTerms[idz*inputDim + i*numHarmonics + j] * fourierCoeffsCos[idy*outputDim + i*numHarmonics + j];
-			// ySinSum += sinTerms[idz*inputDim + i*numHarmonics + j] * fourierCoeffsSin[idy*outputDim + i*numHarmonics + j];
 			yCosSum += cosTerms[idz*inputDim*numHarmonics + i*numHarmonics + j] * fourierCoeffsCos[idy*inputDim*numHarmonics + i*numHarmonics + j];
 			ySinSum += sinTerms[idz*inputDim*numHarmonics + i*numHarmonics + j] * fourierCoeffsSin[idy*inputDim*numHarmonics + i*numHarmonics + j];
+			partialProdsCosTest[i*numHarmonics + j] = cosTerms[idz*inputDim*numHarmonics + i*numHarmonics + j] * fourierCoeffsCos[idy*inputDim*numHarmonics + i*numHarmonics + j];
 
+		}
+		partialProdsCos[idx] += cosTerms[idz*inputDim*numHarmonics + i*numHarmonics + idx] * fourierCoeffsCos[idy*inputDim*numHarmonics + i*numHarmonics + idx];
+		partialProdsSin[idx] += sinTerms[idz*inputDim*numHarmonics + i*numHarmonics + idx] * fourierCoeffsSin[idy*inputDim*numHarmonics + i*numHarmonics + idx];
+	}
 
+	__syncthreads();
+	// reduce partial prods array
+	for(int i=numHarmonics;i>=2;i=i/2){
+		if(idx < i/2){
+			partialProdsCos[idx] += partialProdsCos[idx + i/2];
+			partialProdsSin[idx] += partialProdsSin[idx + i/2];
 		}
 	}
 
-	y[idz*outputDim + idy] = yCosSum + ySinSum + bias;
+	__syncthreads();
+	y[idz*outputDim + idy] = partialProdsCos[0] + partialProdsSin[0] + bias;
+	// y[idz*outputDim + idy] = yCosSum + ySinSum + bias;
 }
 
 template<typename tensor>
@@ -71,8 +87,8 @@ void kanGPU(tensor *a, tensor *b, tensor *c, tensor *res){
 	int totalThreads = numHarmonics * inputDim * batchSize;
 
 	// change to appropriate number
-	dim3 gridDim(1,1,1);
-	dim3 blockDim(numHarmonics,inputDim,batchSize);
+	dim3 gridDim(xBlocks,yBlocks,zBlocks);
+	dim3 blockDim(ceil(numHarmonics/xBlocks),ceil(yThreads/yBlocks),ceil(batchSize/zBlocks));
 
 	// allocate device and host memory
 	tensor *x;
@@ -84,7 +100,7 @@ void kanGPU(tensor *a, tensor *b, tensor *c, tensor *res){
 	cudaMalloc((void **)&fcc, outputDim*inputDim*numHarmonics*sizeof(tensor));
 	cudaMalloc((void **)&fcs, outputDim*inputDim*numHarmonics*sizeof(tensor));
 	cudaMalloc((void **)&y, totalThreads*sizeof(tensor));
-    cudaMemset(y, 0, batchSize*outputDim*sizeof(tensor));
+    // cudaMemset(y, 0, batchSize*outputDim*sizeof(tensor));
 
 
 	cudaMemcpy(x, a, totalThreads*sizeof(tensor), cudaMemcpyHostToDevice);
@@ -98,7 +114,10 @@ void kanGPU(tensor *a, tensor *b, tensor *c, tensor *res){
     // copy back to CPU
 	cudaMemcpy(res, y, batchSize*outputDim*sizeof(tensor), cudaMemcpyDeviceToHost);
 
-
+	cudaFree(x);
+	cudaFree(fcc);
+	cudaFree(fcs);
+	cudaFree(y);
 }
 
 int main(){
@@ -118,17 +137,19 @@ int main(){
 	std::istream_iterator<float> fcsstart(fcsfile), fcsend;
 	std::vector <float> fcsVec(fcsstart,fcsend);
 
-	float x[batchSize*inputDim*numHarmonics] = {0};
-	float fourierCoeffsCos[outputDim*inputDim*numHarmonics] = {0};
-	float fourierCoeffsSin[outputDim*inputDim*numHarmonics] = {0};
+	float *x;
+	float *fourierCoeffsCos;
+	float *fourierCoeffsSin;
 
-	std::copy(xVec.begin(), xVec.end(), x);
-	std::copy(fccVec.begin(), fccVec.end(), fourierCoeffsCos);
-	std::copy(fcsVec.begin(), fcsVec.end(), fourierCoeffsSin);
+	x = &xVec[0];
+	fourierCoeffsCos = &fccVec[0];
+	fourierCoeffsSin = &fcsVec[0];
 
 	kanGPU<float>(x,fourierCoeffsCos,fourierCoeffsSin,y);
 
 	for(int i=0;i<batchSize*outputDim;i++){
 		std::cout << y[i] << std::endl;
 	}
+
+	return 0;
 }
